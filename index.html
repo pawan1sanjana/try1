@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Green Leaves Supply Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+    }
+    
+    .loader-container {
+      position: relative;
+      width: 80px;
+      height: 80px;
+    }
+    
+    .spinner-ring {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      border: 6px solid #e8f5e9;
+      border-top: 6px solid #4CAF50;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    .spinner-inner {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      top: 10px;
+      left: 10px;
+      border: 4px solid #e8f5e9;
+      border-right: 4px solid #2e7d32;
+      border-radius: 50%;
+      animation: spin 1.5s linear infinite reverse;
+    }
+    
+    .spinner-dot {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      top: 32px;
+      left: 32px;
+      background: linear-gradient(135deg, #4CAF50, #2e7d32);
+      border-radius: 50%;
+      animation: pulse 1s ease-in-out infinite;
+    }
+    
+    .loader-text {
+      position: absolute;
+      bottom: -35px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #2e7d32;
+      font-weight: 600;
+      white-space: nowrap;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <!-- Loader -->
+  <div id="loader" class="hidden fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex justify-center items-center">
+    <div class="loader-container">
+      <div class="spinner-ring"></div>
+      <div class="spinner-inner"></div>
+      <div class="spinner-dot"></div>
+      <div class="loader-text">Loading...</div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto my-10 px-4">
+    <div class="bg-white rounded-xl shadow-lg p-8">
+      <h1 class="text-3xl font-bold text-green-700 text-center mb-8">Green Leaves Supply Tracker</h1>
+      
+      <!-- Controls Section -->
+      <div class="flex flex-wrap gap-4 justify-between mb-8">
+        <div class="flex flex-col min-w-[160px]">
+          <label class="text-sm font-medium mb-2 text-gray-700">Filter by Farmer:</label>
+          <select id="farmer-filter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option value="">All Farmers</option>
+          </select>
+        </div>
+        
+        <div class="flex flex-col min-w-[160px]">
+          <label class="text-sm font-medium mb-2 text-gray-700">From Date:</label>
+          <input type="date" id="date-from" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+        
+        <div class="flex flex-col min-w-[160px]">
+          <label class="text-sm font-medium mb-2 text-gray-700">To Date:</label>
+          <input type="date" id="date-to" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+        
+        <div class="flex flex-col min-w-[160px]">
+          <label class="text-sm font-medium mb-2 text-gray-700">Supply Status:</label>
+          <select id="status-filter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option value="">All Status</option>
+            <option value="on-time">On Schedule</option>
+            <option value="early">Early Supply</option>
+            <option value="delayed">Delayed Supply</option>
+          </select>
+        </div>
+        
+        <div class="flex flex-col justify-end">
+          <button id="apply-filters" class="px-6 py-2 bg-green-700 text-white rounded-lg font-medium hover:bg-green-800 transition duration-300 focus:outline-none focus:ring-2 focus:ring-green-500">
+            Apply Filters
+          </button>
+        </div>
+      </div>
+      
+      <!-- Dashboard Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-green-50 rounded-xl p-6 text-center">
+          <h3 class="text-base font-medium text-green-700 mb-2">Total Farmers</h3>
+          <div id="total-farmers" class="text-2xl font-bold text-gray-800">0</div>
+        </div>
+        
+        <div class="bg-green-50 rounded-xl p-6 text-center">
+          <h3 class="text-base font-medium text-green-700 mb-2">Total Supplies</h3>
+          <div id="total-supplies" class="text-2xl font-bold text-gray-800">0</div>
+        </div>
+        
+        <div class="bg-green-50 rounded-xl p-6 text-center">
+          <h3 class="text-base font-medium text-green-700 mb-2">On Schedule Rate</h3>
+          <div id="on-time-rate" class="text-2xl font-bold text-gray-800">0%</div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse">
+          <thead>
+            <tr class="bg-green-600 text-white">
+              <th class="border border-gray-300 px-4 py-3 text-center text-sm font-semibold">Farmer ID</th>
+              <th class="border border-gray-300 px-4 py-3 text-center text-sm font-semibold">Farmer Name</th>
+              <th class="border border-gray-300 px-4 py-3 text-center text-sm font-semibold">Supply Date</th>
+              <th class="border border-gray-300 px-4 py-3 text-center text-sm font-semibold">Quantity (kg)</th>
+              <th class="border border-gray-300 px-4 py-3 text-center text-sm font-semibold">Expected Date</th>
+              <th class="border border-gray-300 px-4 py-3 text-center text-sm font-semibold">Status</th>
+              <th class="border border-gray-300 px-4 py-3 text-center text-sm font-semibold">Days Off Schedule</th>
+            </tr>
+          </thead>
+          <tbody id="supply-data" class="text-sm">
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Pagination -->
+      <div id="pagination" class="text-center mt-6 flex justify-center gap-2 flex-wrap"></div>
+
+      <!-- Farmer Schedule Section -->
+      <div id="farmer-schedule" class="hidden mt-8 p-6 bg-green-50 rounded-xl">
+        <h2 id="schedule-farmer-name" class="text-xl font-bold text-green-800 mb-4"></h2>
+        <div id="supply-pattern" class="mb-4 text-gray-700"></div>
+        <h3 class="text-lg font-semibold text-green-700 mb-3">Upcoming Supply Dates</h3>
+        <ul id="upcoming-dates" class="list-none space-y-2 text-gray-700"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Sample Data ---
+    const sampleData = [
+      { id: 1, farmer_id: "F001", farmer_name: "John Smith", supply_date: "2025-05-01", quantity: 120 },
+      { id: 2, farmer_id: "F001", farmer_name: "John Smith", supply_date: "2025-05-08", quantity: 145 },
+      { id: 3, farmer_id: "F001", farmer_name: "John Smith", supply_date: "2025-05-16", quantity: 110 },
+      { id: 4, farmer_id: "F002", farmer_name: "Maria Garcia", supply_date: "2025-05-02", quantity: 200 },
+      { id: 5, farmer_id: "F002", farmer_name: "Maria Garcia", supply_date: "2025-05-09", quantity: 190 },
+      { id: 6, farmer_id: "F002", farmer_name: "Maria Garcia", supply_date: "2025-05-16", quantity: 205 },
+      { id: 7, farmer_id: "F003", farmer_name: "Ahmed Hassan", supply_date: "2025-05-03", quantity: 175 },
+      { id: 8, farmer_id: "F003", farmer_name: "Ahmed Hassan", supply_date: "2025-05-09", quantity: 165 },
+      { id: 9, farmer_id: "F003", farmer_name: "Ahmed Hassan", supply_date: "2025-05-16", quantity: 180 },
+      { id: 10, farmer_id: "F004", farmer_name: "Priya Sharma", supply_date: "2025-05-04", quantity: 150 },
+      { id: 11, farmer_id: "F004", farmer_name: "Priya Sharma", supply_date: "2025-05-11", quantity: 145 },
+      { id: 12, farmer_id: "F004", farmer_name: "Priya Sharma", supply_date: "2025-05-18", quantity: 155 },
+      { id: 13, farmer_id: "F005", farmer_name: "Chen Wei", supply_date: "2025-05-05", quantity: 220 },
+      { id: 14, farmer_id: "F005", farmer_name: "Chen Wei", supply_date: "2025-05-12", quantity: 215 },
+      { id: 15, farmer_id: "F005", farmer_name: "Chen Wei", supply_date: "2025-05-19", quantity: 225 },
+    ];
+
+    let filteredData = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('loader').classList.remove('hidden');
+
+      setTimeout(() => {
+        processSupplyData(sampleData);
+        populateFarmerFilter(sampleData);
+        updateDashboardStats(sampleData);
+
+        filteredData = analyzeSupplySchedule(sampleData);
+        displayData(filteredData, currentPage);
+        setupPagination(filteredData);
+
+        document.getElementById('loader').classList.add('hidden');
+      }, 800);
+
+      document.getElementById('apply-filters').addEventListener('click', applyFilters);
+    });
+
+    function processSupplyData(data) {
+      return data.sort((a, b) => a.farmer_id.localeCompare(b.farmer_id) || new Date(a.supply_date) - new Date(b.supply_date));
+    }
+
+    function analyzeSupplySchedule(data) {
+      const farmers = {};
+      const result = [];
+
+      data.forEach(supply => {
+        if (!farmers[supply.farmer_id]) farmers[supply.farmer_id] = [];
+        farmers[supply.farmer_id].push({ ...supply, supply_date_obj: new Date(supply.supply_date) });
+      });
+
+      for (const farmerId in farmers) {
+        const supplies = farmers[farmerId].sort((a, b) => a.supply_date_obj - b.supply_date_obj);
+        supplies.forEach((supply, index) => {
+          let expectedDate = null, daysOff = 0, status = "on-time";
+          if (index > 0) {
+            const prevDate = supplies[index - 1].supply_date_obj;
+            expectedDate = new Date(prevDate);
+            expectedDate.setDate(prevDate.getDate() + 7);
+            daysOff = Math.round((supply.supply_date_obj - expectedDate) / (1000 * 60 * 60 * 24));
+            if (daysOff < 0) status = "early";
+            else if (daysOff > 0) status = "delayed";
+          }
+          result.push({ ...supply, expected_date: expectedDate ? formatDate(expectedDate) : "First Supply", days_off: daysOff, status });
+        });
+      }
+      return result;
+    }
+
+    function formatDate(date) {
+      return date.toISOString().split("T")[0];
+    }
+
+    function displayData(data, page) {
+      const tableBody = document.getElementById('supply-data');
+      tableBody.innerHTML = '';
+      const start = (page - 1) * itemsPerPage;
+      const pageData = data.slice(start, start + itemsPerPage);
+
+      pageData.forEach(item => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-green-50 transition duration-150';
+        const statusText = item.status === "on-time" ? "On Schedule" : item.status === "early" ? "Early" : "Delayed";
+        const statusClass = item.status === "on-time" ? "bg-green-500" : item.status === "early" ? "bg-blue-600" : "bg-red-600";
+        
+        row.innerHTML = `
+          <td class="border border-gray-300 px-4 py-3 text-center">${item.farmer_id}</td>
+          <td class="border border-gray-300 px-4 py-3 text-center">
+            <a href="#" class="farmer-link text-blue-600 hover:text-blue-800 hover:underline" data-id="${item.farmer_id}">${item.farmer_name}</a>
+          </td>
+          <td class="border border-gray-300 px-4 py-3 text-center">${item.supply_date}</td>
+          <td class="border border-gray-300 px-4 py-3 text-center">${item.quantity} kg</td>
+          <td class="border border-gray-300 px-4 py-3 text-center">${item.expected_date}</td>
+          <td class="border border-gray-300 px-4 py-3 text-center">
+            <span class="inline-block px-3 py-1 rounded-lg text-white text-xs font-medium ${statusClass}">${statusText}</span>
+          </td>
+          <td class="border border-gray-300 px-4 py-3 text-center">${item.expected_date === 'First Supply' ? '-' : item.days_off}</td>`;
+        tableBody.appendChild(row);
+      });
+
+      document.querySelectorAll('.farmer-link').forEach(link => {
+        link.addEventListener('click', e => {
+          e.preventDefault();
+          showFarmerSchedule(e.target.dataset.id);
+        });
+      });
+    }
+
+    function setupPagination(data) {
+      const pagination = document.getElementById('pagination');
+      pagination.innerHTML = '';
+      const totalPages = Math.ceil(data.length / itemsPerPage);
+      for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement('button');
+        btn.className = `px-4 py-2 rounded-lg text-white font-medium transition duration-300 ${
+          i === currentPage ? 'bg-green-800' : 'bg-green-700 hover:bg-green-800'
+        }`;
+        btn.textContent = i;
+        btn.addEventListener('click', () => {
+          currentPage = i;
+          displayData(filteredData, currentPage);
+          setupPagination(filteredData);
+        });
+        pagination.appendChild(btn);
+      }
+    }
+
+    function populateFarmerFilter(data) {
+      const farmerFilter = document.getElementById('farmer-filter');
+      const farmers = [...new Set(data.map(i => i.farmer_id))];
+      farmers.forEach(farmerId => {
+        const farmerName = data.find(i => i.farmer_id === farmerId).farmer_name;
+        const option = document.createElement('option');
+        option.value = farmerId;
+        option.textContent = `${farmerId} - ${farmerName}`;
+        farmerFilter.appendChild(option);
+      });
+    }
+
+    function applyFilters() {
+      const farmerId = document.getElementById('farmer-filter').value;
+      const dateFrom = document.getElementById('date-from').value;
+      const dateTo = document.getElementById('date-to').value;
+      const status = document.getElementById('status-filter').value;
+
+      document.getElementById('loader').classList.remove('hidden');
+      setTimeout(() => {
+        let filtered = analyzeSupplySchedule(sampleData);
+        if (farmerId) filtered = filtered.filter(i => i.farmer_id === farmerId);
+        if (dateFrom) filtered = filtered.filter(i => i.supply_date >= dateFrom);
+        if (dateTo) filtered = filtered.filter(i => i.supply_date <= dateTo);
+        if (status) filtered = filtered.filter(i => i.status === status);
+
+        filteredData = filtered;
+        currentPage = 1;
+        displayData(filteredData, currentPage);
+        setupPagination(filteredData);
+        updateDashboardStats(filteredData);
+        document.getElementById('loader').classList.add('hidden');
+      }, 600);
+    }
+
+    function updateDashboardStats(data) {
+      const uniqueFarmers = [...new Set(data.map(i => i.farmer_id))].length;
+      const totalSupplies = data.length;
+      const onTimeRate = totalSupplies ? Math.round(data.filter(i => i.status === 'on-time').length / totalSupplies * 100) : 0;
+      document.getElementById('total-farmers').textContent = uniqueFarmers;
+      document.getElementById('total-supplies').textContent = totalSupplies;
+      document.getElementById('on-time-rate').textContent = onTimeRate + '%';
+    }
+
+    function showFarmerSchedule(farmerId) {
+      const farmerData = sampleData.filter(i => i.farmer_id === farmerId).sort((a, b) => new Date(a.supply_date) - new Date(b.supply_date));
+      if (!farmerData.length) return;
+      const farmerName = farmerData[0].farmer_name;
+      document.getElementById('schedule-farmer-name').textContent = `${farmerName} (${farmerId}) Supply Schedule`;
+      const patternDiv = document.getElementById('supply-pattern');
+      patternDiv.innerHTML = `<p class="mb-2"><strong>${farmerName}</strong> has made ${farmerData.length} supplies.</p>`;
+      if (farmerData.length > 1) {
+        let totalDays = 0;
+        for (let i = 1; i < farmerData.length; i++) {
+          totalDays += (new Date(farmerData[i].supply_date) - new Date(farmerData[i - 1].supply_date)) / (1000 * 60 * 60 * 24);
+        }
+        const avgInterval = (totalDays / (farmerData.length - 1)).toFixed(1);
+        patternDiv.innerHTML += `<p>Average supply interval: ${avgInterval} days</p>`;
+      }
+
+      const lastSupply = new Date(farmerData[farmerData.length - 1].supply_date);
+      const upcomingDates = [];
+      for (let i = 1; i <= 3; i++) {
+        const nextDate = new Date(lastSupply);
+        nextDate.setDate(lastSupply.getDate() + (7 * i));
+        upcomingDates.push(formatDate(nextDate));
+      }
+      const upcomingList = document.getElementById('upcoming-dates');
+      upcomingList.innerHTML = upcomingDates.map(date => `<li class="py-1">📅 ${date}</li>`).join('');
+      document.getElementById('farmer-schedule').classList.remove('hidden');
+      window.scrollTo({ top: document.getElementById('farmer-schedule').offsetTop - 20, behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>
